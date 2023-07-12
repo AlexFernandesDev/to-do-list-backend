@@ -1,7 +1,7 @@
 import express, { Request, Response } from 'express'
 import cors from 'cors'
 import { db } from './database/knex'
-import { TUserDB } from './types'
+import { TTaskDB, TUserDB } from './types'
 
 const app = express()
 
@@ -61,7 +61,7 @@ app.post("/users", async (req: Request, res: Response) => {
     try {
         const { id, name, email, password } = req.body
         
-        if(typeof id != "string") {
+        if(typeof id !== "string") {
             res.status(400)
             throw new Error("'id' deve ser string")
         }
@@ -71,7 +71,7 @@ app.post("/users", async (req: Request, res: Response) => {
             throw new Error("'id' deve possuir ao menos 4 caracteres")
         }
 
-        if(typeof name != "string") {
+        if(typeof name !== "string") {
             res.status(400)
             throw new Error("'name' deve ser string")
         }
@@ -81,7 +81,7 @@ app.post("/users", async (req: Request, res: Response) => {
             throw new Error("'name' deve possuir ao menos 4 caracteres")
         }
 
-        if(typeof email != "string") {
+        if(typeof email !== "string") {
             res.status(400)
             throw new Error("'name' deve ser string")
         }
@@ -186,6 +186,71 @@ app.get("/tasks", async (req: Request, res: Response) => {
                 .orWhere("description", "LIKE", `%${searchTerm}%`)
             res.status(200).send(result)
         }   
+    } catch (error) {
+        console.log(error)
+
+        if (req.statusCode === 200) {
+            res.status(500)
+        }
+
+        if (error instanceof Error) {
+            res.send(error.message)
+        } else {
+            res.send("Erro inesperado")
+        }
+    }
+})
+
+app.post("/tasks", async (req: Request, res: Response) => {
+    try {
+        const { id, title, description } = req.body
+        
+        if(typeof id !== "string") {
+            res.status(400)
+            throw new Error("'id' deve ser string")
+        }
+
+        if(id.length < 4) {
+            res.status(400)
+            throw new Error("'id' deve possuir ao menos 4 caracteres")
+        }
+
+        if(typeof title !== "string") {
+            res.status(400)
+            throw new Error("'name' deve ser string")
+        }
+
+        if(title.length < 2) {
+            res.status(400)
+            throw new Error("'name' deve possuir ao menos 4 caracteres")
+        }
+
+        if(typeof description !== "string") {
+            res.status(400)
+            throw new Error("'name' deve ser string")
+        }
+
+        const [ taskIdAlreadyExists ]: TTaskDB[] | undefined[] = await db("tasks").where({ id })
+
+        if(taskIdAlreadyExists) {
+            res.status(400)
+            throw new Error("'id' existente")
+        }
+
+        const newTask = {
+            id,
+            title,
+            description  
+        }
+
+        await db("tasks").insert(newTask)
+
+        const [ insertedTask ]: TTaskDB[] = await db("tasks").where({ id })
+
+        res.status(201).send({
+            message: "Task criada com sucesso",
+            task: insertedTask
+        })
     } catch (error) {
         console.log(error)
 
